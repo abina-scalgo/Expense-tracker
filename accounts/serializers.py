@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import UserDetails
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
 
@@ -50,3 +51,18 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             last_name=last_name
         )
         return user
+
+# LOGOUT SERIALIZER
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+
+    def validate(self, attrs):
+        try:
+            refresh_token = attrs["refresh"]
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        except Exception:
+            raise serializers.ValidationError("Invalid or expired token.")
+            
+        return attrs
+
