@@ -1,0 +1,11 @@
+# Python cache
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Django database (since using MySQL)
+*.sqlite3
+
+# Environments
+.venv/
+venv/
