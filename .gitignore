@@ -1,12 +1,29 @@
-# Python cache
-**/__pycache__/
-*.py[cod]
-*$py.class
+# # Python cache
+# **/__pycache__/
+# *.py[cod]
+# *$py.class
 
-# Django database (since using MySQL)
-*.sqlite3
+# # Django database (since using MySQL)
+# *.sqlite3
 
-# Environments
-.venv/
+# # Environments
+# .venv/
+# venv/
+# local_settings.py
+
+
+# Virtual environment
 venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Django
 local_settings.py
+db.sqlite3
+
+# OS files
+.DS_Store
