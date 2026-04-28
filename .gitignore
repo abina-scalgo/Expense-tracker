@@ -38,3 +38,7 @@ venv/
 config/local_settings.py
 
 .DS_Store#script#
+local_settings.py
+
+.DS_Store#script#
+local_settings.py
