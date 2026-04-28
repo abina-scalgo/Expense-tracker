@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
-    'accounts'
+    'accounts',
+    'expense'
 ]
 
 REST_FRAMEWORK = {
@@ -99,9 +100,9 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'expense_tracker_db',
+        'NAME': 'expense_tracker',
         'USER': 'root',
-        'PASSWORD': '1234',
+        'PASSWORD': '9895',
         'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
@@ -156,3 +157,8 @@ import os
 # Where Django stores uploaded files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+try:
+    from local_settings import *
+except ImportError:
+    pass
