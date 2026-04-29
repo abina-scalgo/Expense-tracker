@@ -1,11 +1,13 @@
 # Python cache
 **/__pycache__/
 *.py[cod]
-*$py.class
-
-# Django database (since using MySQL)
-*.sqlite3
 
 # Environments
-.venv/
 venv/
+.venv/
+
+# Databases
+*.sqlite3
+
+# Local Settings
+config/local_settings.py
