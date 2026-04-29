@@ -17,13 +17,24 @@ venv/
 env/
 
 # Python cache
-__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
 *.pyc
 *.pyo
 
-# Django
-local_settings.py
-db.sqlite3
 
-# OS files
+# Django database (since using MySQL)
+*.sqlite3
+
+# Environments
+venv/
+.venv/
+
+# Databases
+*.sqlite3
+
+# Local Settings
+config/local_settings.py
+
 .DS_Store#script#
