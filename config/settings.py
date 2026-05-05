@@ -163,3 +163,6 @@ try:
 except ImportError:
     raise Exception("A local_settings.py file is required. "
                     "Copy sample_local_settings.py to local_settings.py to start.")
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
