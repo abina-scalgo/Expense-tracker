@@ -84,3 +84,30 @@ class Expense(models.Model):
                 self.approve_or_rejected_at = timezone.now() + timedelta(hours=24)
                 
         super().save(*args, **kwargs)
+
+
+
+def expense_receipt_path(instance, filename):
+    # Returns: receipts/<user_id>/<expense_id>/<filename>
+    return f'receipts/{instance.expense.user.id}/{instance.expense.id}/{filename}'
+
+class ExpenseReceipt(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    expense = models.ForeignKey(
+        'Expense', 
+        on_delete=models.CASCADE, 
+        related_name='receipts'
+    )
+    
+    file = models.FileField(upload_to=expense_receipt_path)
+    file_name = models.CharField(max_length=255)
+    file_type = models.CharField(max_length=10)
+    file_size_kb = models.IntegerField()
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'expense_receipts'
+
+    def __str__(self):
+        return self.file_name
+
