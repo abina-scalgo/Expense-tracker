@@ -16,10 +16,31 @@
 venv/
 env/
 
+# # Python cache
+# **/__pycache__/
+# *.py[cod]
+# *$py.class
+
+# # Django database (since using MySQL)
+# *.sqlite3
+
+# # Environments
+# .venv/
+# venv/
+# local_settings.py
+
+
+# Virtual environment
+venv/
+env/
+
 # Python cache
 **/__pycache__/
 *.py[cod]
 *$py.class
+*.pyc
+*.pyo
+
 *.pyc
 *.pyo
 
