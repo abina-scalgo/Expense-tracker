@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django_filters',
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'accounts',
     'expense'
@@ -112,6 +113,20 @@ WSGI_APPLICATION = 'config.wsgi.application'
 #         },
 #     }
 # }
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'expense_tracker_db',
+#         'USER': 'root',
+#         'PASSWORD': '1234',
+#         'HOST': 'localhost',
+#         'PORT': '3306',
+#         'OPTIONS': {
+#             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+#             'charset': 'utf8mb4',
+#         },
+#     }
+# }
 
 
 
@@ -165,3 +180,6 @@ try:
 except ImportError:
     raise Exception("A local_settings.py file is required. "
                     "Copy sample_local_settings.py to local_settings.py to start.")
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
