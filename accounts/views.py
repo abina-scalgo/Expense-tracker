@@ -13,6 +13,7 @@ from .serializers import (
     UserListSerializer, UserDetailSerializer, UserUpdateSerializer
 )
 
+# Login View (JWT)
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 

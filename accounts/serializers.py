@@ -2,10 +2,10 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import UserDetails
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
 
+# Custom Login Serializer (JWT)
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
@@ -14,6 +14,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['must_change_password'] = self.user.must_change_password
         return data
 
+
+# Registration Serializer
 class UserRegistrationSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(write_only=True)
     last_name = serializers.CharField(write_only=True)
