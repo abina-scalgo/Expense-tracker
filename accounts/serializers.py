@@ -2,11 +2,10 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import UserDetails
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
 
-# CUSTOM LOGIN SERIALIZER (JWT)
+# Custom Login Serializer (JWT)
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     Adds custom fields to the JWT response so the mobile app knows 
@@ -23,7 +22,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return data
 
 
-# REGISTRATION SERIALIZER
+# Registration Serializer
 class UserRegistrationSerializer(serializers.ModelSerializer):
     """
     Creates a User and an associated UserDetails profile record simultaneously.
@@ -52,17 +51,57 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         )
         return user
 
-# LOGOUT SERIALIZER
-class LogoutSerializer(serializers.Serializer):
-    refresh = serializers.CharField()
+
+# Change Password Serializer
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+    confirm_password = serializers.CharField(required=True)
+
+    def validate_old_password(self, value):
+        user = self.context['request'].user
+
+        # Check if current password is correct
+        if not user.check_password(value):
+            raise serializers.ValidationError("Current password is incorrect.")
+        return value
 
     def validate(self, attrs):
-        try:
-            refresh_token = attrs["refresh"]
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-        except Exception:
-            raise serializers.ValidationError("Invalid or expired token.")
-            
+        new_pass = attrs.get('new_password')
+        old_pass = attrs.get('old_password')
+        confirm_pass = attrs.get('confirm_password')
+
+        # Check if new password is same as old password
+        if new_pass == old_pass:
+            raise serializers.ValidationError(
+                {"new_password": "New Password cannot be same as your current password."}
+            )
+
+        # Check if new password is same as confirm password
+        if new_pass != confirm_pass:
+            raise serializers.ValidationError(
+                {"confirm_password": "Passwords do not match."}
+            )
+
+        # Validate that the password meets all security criteria
+        rules = [
+            len(new_pass) >= 8,                  
+            re.search(r'[A-Z]', new_pass),       
+            re.search(r'[a-z]', new_pass),       
+            re.search(r'[0-9]', new_pass),       
+            re.search(r'[!@#$%^&*()_+{}|:\"<>?]', new_pass)
+        ]
+
+        if not all(rules):
+            raise serializers.ValidationError({
+                "new_password": "Password must contain at least 8 characters, including uppercase, lowercase, numbers, and symbols."
+            })
+
         return attrs
 
+    def save(self, **kwargs):
+        user = self.context['request'].user
+        user.set_password(self.validated_data['new_password'])
+        user.must_change_password = False 
+        user.save()
+        return user
