@@ -8,7 +8,8 @@ from .models import ExpenseCategory, Expense
 from .serializers import ExpenseCategorySerializer, ExpenseSerializer
 from .permissions import IsAdminRoleOrReadOnly
 from rest_framework.permissions import IsAuthenticated
-
+from django.utils import timezone
+from rest_framework.decorators import action
 
 # Create your views here.
 
@@ -58,3 +59,44 @@ class ExpenseViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
         return super().destroy(request, *args, **kwargs)
+
+
+class AdminExpenseViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Expense.objects.all().select_related('user', 'category')
+    serializer_class = ExpenseSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    #Expense Approve
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        expense = self.get_object()
+        
+        if expense.status != Expense.Status.PENDING:
+            return Response({"detail": "Only pending expenses can be approved."}, status=400)
+
+        expense.status = Expense.Status.APPROVED
+        expense.actioned_at = timezone.now()
+        expense.save()
+
+        return Response({"detail": "Expense approved successfully."})
+
+    #Expense Reject
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        expense = self.get_object()
+        
+        # Check if remarks were provided
+        remarks = request.data.get('remarks')
+        if not remarks:
+            return Response({"remarks": "This field is mandatory for rejection."}, status=400)
+
+        if expense.status != Expense.Status.PENDING:
+            return Response({"detail": "Only pending expenses can be rejected."}, status=400)
+
+        expense.status = Expense.Status.REJECTED
+        expense.actioned_at = timezone.now()
+        # Append remarks to the note
+        expense.note = f"{expense.note or ''}\n\nAdmin Remarks: {remarks}".strip()
+        expense.save()
+
+        return Response({"detail": "Expense rejected successfully."})
