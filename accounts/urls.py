@@ -1,12 +1,13 @@
-from django.urls import path
-from .views import UserRegistrationView, CustomTokenObtainPairView, ChangePasswordView
+from django.urls import path, include 
+from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
+from .views import CustomTokenObtainPairView, UserAdminViewSet
+
+router = DefaultRouter()
+router.register(r'admin/users', UserAdminViewSet, basename='admin-users')
 
 urlpatterns = [
-    path('register/', UserRegistrationView.as_view(), name='register'),
+    path('', include(router.urls)),
     path('login/', CustomTokenObtainPairView.as_view(), name='login'),
-    path('change-password/', ChangePasswordView.as_view(), name='change-password'),
-    # Essential for mobile: allows the app to get a new access token 
-    # without making the user type their password again.
     path('login/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
