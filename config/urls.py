@@ -19,7 +19,7 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # This line tells Django to look at acounts app urls
+    # This line tells Django to look at app urls
     path('api/', include('accounts.urls')),
     path('api/', include('expense.urls')),
     path('api/', include('wallets.urls'))

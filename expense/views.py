@@ -10,6 +10,8 @@ from .permissions import IsAdminRoleOrReadOnly
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from rest_framework.decorators import action
+from django.db import transaction
+from wallets.models import Wallet, Transaction
 
 # Create your views here.
 
@@ -74,11 +76,27 @@ class AdminExpenseViewSet(viewsets.ReadOnlyModelViewSet):
         if expense.status != Expense.Status.PENDING:
             return Response({"detail": "Only pending expenses can be approved."}, status=400)
 
-        expense.status = Expense.Status.APPROVED
-        expense.actioned_at = timezone.now()
-        expense.save()
+        with transaction.atomic():
+            # Update Expense
+            expense.status = Expense.Status.APPROVED
+            expense.actioned_at = timezone.now()
+            expense.save()
 
-        return Response({"detail": "Expense approved successfully."})
+            # Update Wallet (Crediting the user)
+            wallet, created = Wallet.objects.get_or_create(user=expense.user)
+            wallet.available_balance += expense.amount # Add to balance
+            wallet.save()
+
+            # Create Transaction Record
+            Transaction.objects.create(
+                wallet=wallet,
+                expense=expense,
+                type='credit',
+                amount=expense.amount,
+                description=f"Reimbursement for {expense.category}"
+            )
+
+        return Response({"detail": "Expense approved and balance updated."})
 
     #Expense Reject
     @action(detail=True, methods=['post'])
