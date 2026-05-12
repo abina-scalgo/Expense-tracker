@@ -13,7 +13,7 @@ router = DefaultRouter()
 router.register(r'bank-details', BankDetailsViewSet, basename='bank-detail')
 
 urlpatterns = [
-    path('register/', UserRegistrationView.as_view(), name='register'),
+    path('', include(router.urls)),
     path('login/', CustomTokenObtainPairView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'), 
     # Allows the app to get a new access token without making the user type their password again.

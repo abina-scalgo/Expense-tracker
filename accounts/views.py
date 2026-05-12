@@ -2,6 +2,7 @@ from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from .permissions import IsAdminRoleOrReadOnly
 from rest_framework.response import Response
+from rest_framework.permissions import IsAdminUser
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import viewsets, permissions
 from .models import User, BankDetails
@@ -12,6 +13,7 @@ from .serializers import (
     BankDetailsSerializer
 )
 
+# Login View (JWT)
 # Login View (JWT)
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer

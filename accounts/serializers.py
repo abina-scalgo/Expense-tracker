@@ -8,19 +8,18 @@ from django.db import transaction
 User = get_user_model()
 
 # Custom Login Serializer (JWT)
+# Custom Login Serializer (JWT)
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     #Adds custom fields to the JWT response to determine if they need to reset their password.
     def validate(self, attrs):
         data = super().validate(attrs)
-        
-        # Injects extra data into the JSON response
         data['user_id'] = str(self.user.id)
         data['role'] = self.user.role
         data['must_change_password'] = self.user.must_change_password
-        
         return data
 
 
+# Registration Serializer
 # Registration Serializer
 class UserRegistrationSerializer(serializers.ModelSerializer):
     # Profile Fields
