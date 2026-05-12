@@ -66,3 +66,7 @@ db.sqlite3
 local_settings.py
 # OS files
 .DS_Store
+
+
+#media
+media
