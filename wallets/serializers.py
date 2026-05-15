@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Wallet, Transaction
+from .models import Wallet, Transaction, WithdrawalRequest
 
 class WalletSummarySerializer(serializers.ModelSerializer):
     class Meta:
@@ -9,4 +9,9 @@ class WalletSummarySerializer(serializers.ModelSerializer):
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
-        fields = ['id', 'type', 'amount', 'description', 'expense', 'withdrawal_id', 'created_at']
+        fields = ['id', 'type', 'amount', 'description', 'withdrawal_id', 'created_at']
+
+class WithdrawalRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WithdrawalRequest
+        fields = ['id', 'amount', 'status', 'bank_detail', 'requested_at', 'processed_at', 'failure_reason']

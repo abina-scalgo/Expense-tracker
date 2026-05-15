@@ -31,7 +31,7 @@ class Wallet(models.Model):
     )
 
     def __str__(self):
-        return f"Wallet: {self.user.username}"
+        return f"Wallet: {self.user.email}"
 
 class Transaction(models.Model):
     TRANSACTION_TYPES = (
@@ -59,3 +59,42 @@ class Transaction(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+class WithdrawalRequest(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    wallet = models.ForeignKey(
+        Wallet, 
+        on_delete=models.CASCADE, 
+        related_name='withdrawals'
+    )
+    bank_detail = models.ForeignKey(
+        'accounts.BankDetails', 
+        on_delete=models.PROTECT,
+        related_name='withdrawals'
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    status = models.CharField(
+        max_length=12, 
+        choices=STATUS_CHOICES, 
+        default='pending'
+    )
+    
+    razorpay_payout_id = models.CharField(max_length=100, null=True, blank=True)
+    failure_reason = models.TextField(null=True, blank=True)
+    
+    requested_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-requested_at']
+
+    def __str__(self):
+        return f"Withdrawal {self.amount} - {self.status}"
