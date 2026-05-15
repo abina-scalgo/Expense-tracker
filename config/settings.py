@@ -183,4 +183,10 @@ except ImportError:
                     "Copy sample_local_settings.py to local_settings.py to start.")
 
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
+MAILGUN_API_KEY = os.getenv("MAILGUN_API_KEY", "")
+MAILGUN_DOMAIN = os.getenv("MAILGUN_DOMAIN", "sandbox1f8e30c30d754c7fa81857516da0725d.mailgun.org")
+MAILGUN_BASE_URL = "https://api.mailgun.net/v3"
+MAILGUN_FROM_EMAIL = f"Expense Tracker Portal <noreply@{MAILGUN_DOMAIN}>"

@@ -70,3 +70,6 @@ local_settings.py
 
 #media
 media
+
+#Environment variables
+.env

@@ -1,14 +1,17 @@
-from django.core.mail import send_mail
-from django.conf import settings
-from rest_framework import generics, status
+from rest_framework import generics, status, viewsets, permissions
 from rest_framework.permissions import IsAuthenticated
-from .permissions import IsAdminRoleOrReadOnly
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework import viewsets, permissions
+from rest_framework.decorators import action
+from django.shortcuts import get_object_or_404
+from django.utils.crypto import get_random_string
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes
+from django.contrib.auth.tokens import default_token_generator
 from .models import User, BankDetails
 from .pagination import CustomPagination 
+from .utils import send_password_reset_email
 from .serializers import (
     UserRegistrationSerializer, 
     CustomTokenObtainPairSerializer,
@@ -76,18 +79,80 @@ class UserAdminViewSet(viewsets.ModelViewSet):
         if self.action in ['update', 'partial_update']: return UserUpdateSerializer
         return UserDetailSerializer
 
+    # POST /admin/users -> Triggers live Mailgun delivery upon creation
     def perform_create(self, serializer):
         user = serializer.save()
+        # Dispatches credentials via your Mailgun HTTP REST API channel
+        send_password_reset_email(user.email, user.plain_password)
+
+
+
+    # POST /admin/users/send-credentials -> Explicit administrative credential re-send
+    @action(detail=False, methods=['post'], url_path='send-credentials')
+    def send_credentials(self, request):
+        email = request.data.get('email')
+        if not email:
+            return Response({"detail": "Target user email address is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Look up the employee target profile record
+        user = get_object_or_404(User, email=email)
+
+        # Securely generate reset parameters
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
         
-        send_mail(
-            'Your Account Credentials',
-            f'Email: {user.email}\nPassword: {user.plain_password}',
-            settings.EMAIL_HOST_USER,
-            [user.email],
-            fail_silently=False,
-        )
+        # Construct frontend application reset URL
+        frontend_base_url = "mobilefrontend.com"
+        reset_link = f"{frontend_base_url}/{uid}/{token}/"
+
+        # Execute direct delivery transaction call via Mailgun API endpoint
+        email_sent = send_password_reset_email(user.email, reset_link)
+
+        if not email_sent:
+            return Response(
+                {"detail": "Reset token generated, but Mailgun server delivery failed."}, 
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+        return Response({
+            "detail": f"Password reset link successfully dispatched to {user.email}.",
+            "reset_link_generated": reset_link
+        }, status=status.HTTP_200_OK)
+
 
     def perform_destroy(self, instance):
         # Soft delete as per requirements
         instance.is_active = False
         instance.save()
+
+
+class ResetPasswordFromEmailView(generics.GenericAPIView):
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        uidb64 = request.data.get('uid')
+        token = request.data.get('token')
+        new_password = request.data.get('new_password')
+        
+        if not all([uidb64, token, new_password]):
+            return Response(
+                {"detail": "Fields 'uid', 'token', and 'new_password' are required."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        try:
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response({"detail": "Invalid or corrupt link parameters."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if not default_token_generator.check_token(user, token):
+            return Response({"detail": "This reset link has expired or has already been used."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        user.set_password(new_password)
+        if hasattr(user, 'must_change_password'):
+            user.must_change_password = False
+        user.save()
+        
+        return Response({"detail": "Password updated successfully via email token."}, status=status.HTTP_200_OK)
