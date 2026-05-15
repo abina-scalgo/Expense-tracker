@@ -6,7 +6,8 @@ from .views import (
     LogoutView, 
     ChangePasswordView,
     BankDetailsViewSet,
-    UserAdminViewSet
+    UserAdminViewSet,
+    ResetPasswordFromEmailView
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -22,7 +23,7 @@ urlpatterns = [
     path('auth/change-password/', ChangePasswordView.as_view(), name='change-password'),
     # Allows the app to get a new access token without making the user type their password again.
     path('login/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    
+    path('auth/reset-password-confirm/', ResetPasswordFromEmailView.as_view(), name='reset_password_confirm'),
     # Include the router URLs
     path('', include(router.urls)),
 ]
