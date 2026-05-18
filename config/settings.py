@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'accounts',
     'expense',
-    'wallets'
+    'wallets',
+    'notifications.apps.NotificationsConfig',
 ]
 
 REST_FRAMEWORK = {
@@ -103,31 +104,17 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'expense_tracker_db',
-#         'USER': 'root',
-#         'PASSWORD': '1234',
-#         'HOST': 'localhost',
-#         'PORT': '3306',
+#         'NAME': '',
+#         'USER': '',
+#         'PASSWORD': '',
+#         'HOST': '',
+#         'PORT': '',
 #         'OPTIONS': {
 #             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
 #             'charset': 'utf8mb4',
 #         },
 #     }
-# }
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'expense_tracker_db',
-#         'USER': 'root',
-#         'PASSWORD': '1234',
-#         'HOST': 'localhost',
-#         'PORT': '3306',
-#         'OPTIONS': {
-#             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-#             'charset': 'utf8mb4',
-#         },
-#     }
-# }
+
 
 
 

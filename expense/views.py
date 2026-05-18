@@ -12,6 +12,7 @@ from django.utils import timezone
 from rest_framework.decorators import action
 from django.db import transaction
 from wallets.models import Wallet, Transaction
+from decimal import Decimal
 
 # Create your views here.
 
@@ -83,8 +84,12 @@ class AdminExpenseViewSet(viewsets.ReadOnlyModelViewSet):
             expense.save()
 
             # Update Wallet (Crediting the user)
-            wallet, created = Wallet.objects.get_or_create(user=expense.user)
-            wallet.available_balance += expense.amount # Add to balance
+            # select_for_update() prevents race conditions during wallet credit operations
+            wallet, created = Wallet.objects.select_for_update().get_or_create(user=expense.user)
+            
+            # SAFE CAST: Convert float balance to Decimal string representation
+            current_balance = Decimal(str(wallet.available_balance or 0.0))
+            wallet.available_balance = current_balance + expense.amount 
             wallet.save()
 
             # Create Transaction Record
