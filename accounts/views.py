@@ -14,6 +14,7 @@ from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
 from .utils import send_password_reset_email
 from .models import User, BankDetails
+from wallets.models import WithdrawalRequest 
 from .pagination import CustomPagination 
 from .serializers import (
     UserRegistrationSerializer, 
@@ -56,12 +57,30 @@ class BankDetailsViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Returns all bank accounts for logged-in employee
         return BankDetails.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        # Automatically assign the logged-in user
         serializer.save(user=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        account = self.get_object()
+
+        if account.is_primary:
+            # Check for active withdrawal requests for 'pending' or 'processing'
+            has_active_withdrawal = WithdrawalRequest.objects.filter(
+                wallet__user=request.user, 
+                status__in=['pending', 'processing'],
+                bank_detail=account
+            ).exists()
+
+            if has_active_withdrawal:
+                return Response(
+                    {"detail": "Cannot delete your primary account while a pending withdrawal exists."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        return super().destroy(request, *args, **kwargs)
+
 
 # User View
 class UserAdminViewSet(viewsets.ModelViewSet):
