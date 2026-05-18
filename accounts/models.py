@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.conf import settings
+from django.db import transaction
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
 # CUSTOM USER MANAGER
@@ -69,6 +70,7 @@ class UserDetails(models.Model):
 
     class Meta:
         db_table = 'user_details'
+        verbose_name_plural = "User Details"
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
@@ -86,17 +88,42 @@ class BankDetails(models.Model):
     bank_name = models.CharField(max_length=100)
     account_holder_name = models.CharField(max_length=100)
     is_primary = models.BooleanField(default=False)
-    
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'bank_details'
+        verbose_name_plural = "Bank Details"
 
     def save(self, *args, **kwargs):
-        # If this account is set as primary, unset all other accounts for this user
+        # Clean data formats
+        self.ifsc_code = self.ifsc_code.upper().strip()
+        self.account_number = self.account_number.strip()
+
+        # If user has no existing bank accounts, force this one to be primary
+        if not BankDetails.objects.filter(user=self.user).exists():
+            self.is_primary = True
+
         if self.is_primary:
-            BankDetails.objects.filter(user=self.user, is_primary=True).update(is_primary=False)
+            with transaction.atomic():
+                # Clear primary flag on OTHER accounts only excludes current ID
+                queryset = BankDetails.objects.filter(user=self.user, is_primary=True)
+                if self.pk:
+                    queryset = queryset.exclude(pk=self.pk)
+                queryset.update(is_primary=False)
+
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        user = self.user
+        was_primary = self.is_primary
+
+        with transaction.atomic():
+            super().delete(*args, **kwargs)
+            
+            if was_primary:
+                next_account = BankDetails.objects.filter(user=user).order_by('created_at').first()
+                if next_account:
+                    BankDetails.objects.filter(pk=next_account.pk).update(is_primary=True)
 
     def __str__(self):
         return f"{self.bank_name} - {self.account_number}"

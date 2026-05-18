@@ -164,6 +164,13 @@ class BankDetailsSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at']
 
+    def validate(self, attrs):
+        if attrs.get('account_number'):
+            attrs['account_number'] = attrs['account_number'].strip()
+        if attrs.get('ifsc_code'):
+            attrs['ifsc_code'] = attrs['ifsc_code'].upper().strip()
+        return attrs
+
 
 # List User Serializer
 class UserListSerializer(serializers.ModelSerializer):
