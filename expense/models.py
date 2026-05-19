@@ -57,8 +57,20 @@ class Expense(models.Model):
 
     # Timing and Automation
     approve_or_rejected_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Timestamp when an admin manually approved or rejected"
+    )
+
+    auto_approve_at = models.DateTimeField(
         help_text="Scheduled time for Celery to check/auto-process"
     )
+
+    is_amount_auto_approved = models.BooleanField(
+        default=False,
+        help_text="True if expense amount was below AUTO_APPROVE_AMOUNT_LIMIT"
+    )
+
     actioned_at = models.DateTimeField(
         blank=True, 
         null=True, 
@@ -77,11 +89,16 @@ class Expense(models.Model):
         return f"{self.user} - {self.amount} ({self.status})"
     
     def save(self, *args, **kwargs):
-        # Check if this is a brand new record being created
         if self._state.adding: 
-            # Set the deadline for 24 hours from the moment of creation
-            if not self.approve_or_rejected_at:
-                self.approve_or_rejected_at = timezone.now() + timedelta(hours=24)
+            if not self.auto_approve_at:
+                try:
+                    from core.models import SystemSettings
+                    setting = SystemSettings.objects.get(key='AUTO_APPROVE_HOURS')
+                    hours = int(setting.value)
+                except Exception:
+                    hours = 24  # Fallback safety default
+                
+                self.auto_approve_at = timezone.now() + timedelta(hours=hours)
                 
         super().save(*args, **kwargs)
 
