@@ -80,6 +80,7 @@ class AdminExpenseViewSet(viewsets.ReadOnlyModelViewSet):
         with transaction.atomic():
             # Update Expense
             expense.status = Expense.Status.APPROVED
+            expense.actioned_by = request.user
             expense.actioned_at = timezone.now()
             expense.save()
 
@@ -117,6 +118,7 @@ class AdminExpenseViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"detail": "Only pending expenses can be rejected."}, status=400)
 
         expense.status = Expense.Status.REJECTED
+        expense.actioned_by = request.user
         expense.actioned_at = timezone.now()
         # Append remarks to the note
         expense.note = f"{expense.note or ''}\n\nAdmin Remarks: {remarks}".strip()
