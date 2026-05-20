@@ -51,17 +51,12 @@ def process_auto_approvals(self):
                     expense.save()
 
                     # Wallet Update
-                    wallet, created = (
-                        Wallet.objects.select_for_update().get_or_create(user=expense.user)
-                    )
+                    wallet, created = (Wallet.objects.select_for_update().get_or_create(user=expense.user))
 
-                    if wallet.pending_amount >= expense.amount:
-                        wallet.pending_amount -= (
-                            expense.amount
-                        )
-                    wallet.available_balance += (
-                        expense.amount
-                    )
+                    if wallet.pending_amount < expense.amount:
+                        raise ValueError(f"Insufficient pending amount for expense {expense.id}")
+                    wallet.pending_amount -= expense.amount
+                    wallet.available_balance += expense.amount
                     wallet.save()
 
                     # Transaction

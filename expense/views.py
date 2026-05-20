@@ -12,7 +12,6 @@ from django.utils import timezone
 from rest_framework.decorators import action
 from django.db import transaction
 from wallets.models import Wallet, Transaction
-from decimal import Decimal
 
 # Create your views here.
 
@@ -69,7 +68,7 @@ class AdminExpenseViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ExpenseSerializer
     permission_classes = [permissions.IsAdminUser]
 
-    #Expense Approve
+    # Expense Approve
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         expense = self.get_object()
@@ -78,19 +77,25 @@ class AdminExpenseViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"detail": "Only pending expenses can be approved."}, status=400)
 
         with transaction.atomic():
+
+            # Lock Expense
+            expense = Expense.objects.select_for_update().get(id=expense.id)
+
             # Update Expense
             expense.status = Expense.Status.APPROVED
             expense.actioned_by = request.user
             expense.actioned_at = timezone.now()
             expense.save()
 
-            # Update Wallet (Crediting the user)
-            # select_for_update() prevents race conditions during wallet credit operations
-            wallet, created = Wallet.objects.select_for_update().get_or_create(user=expense.user)
-            
-            # SAFE CAST: Convert float balance to Decimal string representation
-            current_balance = Decimal(str(wallet.available_balance or 0.0))
-            wallet.available_balance = current_balance + expense.amount 
+            # Update Wallet
+            wallet, created = (Wallet.objects.select_for_update().get_or_create(user=expense.user))
+
+            # Prevent negative pending amount
+            if wallet.pending_amount < expense.amount:
+                return Response({"detail": "Insufficient pending amount."},status=400)
+
+            wallet.pending_amount -= expense.amount
+            wallet.available_balance += expense.amount
             wallet.save()
 
             # Create Transaction Record
@@ -104,7 +109,7 @@ class AdminExpenseViewSet(viewsets.ReadOnlyModelViewSet):
 
         return Response({"detail": "Expense approved and balance updated."})
 
-    #Expense Reject
+    # Expense Reject
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
         expense = self.get_object()
@@ -115,13 +120,28 @@ class AdminExpenseViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"remarks": "This field is mandatory for rejection."}, status=400)
 
         if expense.status != Expense.Status.PENDING:
-            return Response({"detail": "Only pending expenses can be rejected."}, status=400)
+            return Response({"detail": "Only pending expenses can be rejected."},status=400)
 
-        expense.status = Expense.Status.REJECTED
-        expense.actioned_by = request.user
-        expense.actioned_at = timezone.now()
-        # Append remarks to the note
-        expense.note = f"{expense.note or ''}\n\nAdmin Remarks: {remarks}".strip()
-        expense.save()
+        with transaction.atomic():
+
+            # Lock Expense
+            expense = Expense.objects.select_for_update().get(id=expense.id)
+
+            # Update Expense
+            expense.status = Expense.Status.REJECTED
+            expense.actioned_by = request.user
+            expense.actioned_at = timezone.now()
+            expense.note = (f"{expense.note or ''}\n\nAdmin Remarks: {remarks}").strip()
+            expense.save()
+
+            # Update Wallet
+            wallet, created = (Wallet.objects.select_for_update().get_or_create(user=expense.user))
+
+            # Prevent negative pending amount
+            if wallet.pending_amount < expense.amount:
+                return Response({"detail": "Insufficient pending amount."},status=400)
+
+            wallet.pending_amount -= expense.amount
+            wallet.save()
 
         return Response({"detail": "Expense rejected successfully."})
