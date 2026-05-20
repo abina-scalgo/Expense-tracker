@@ -3,12 +3,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import SystemSettings
 from .serializers import SystemSettingsSerializer
-from accounts.permissions import IsAdminRoleOrReadOnly
+from rest_framework.permissions import IsAdminUser
 
 class SystemSettingsViewSet(viewsets.GenericViewSet):
     queryset = SystemSettings.objects.all()
     serializer_class = SystemSettingsSerializer
-    permission_classes = [IsAdminRoleOrReadOnly]
+    permission_classes = [IsAdminUser]
 
     def list(self, request):
         settings = self.get_queryset()
