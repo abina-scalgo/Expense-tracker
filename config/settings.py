@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     'expense',
     'wallets',
     'notifications.apps.NotificationsConfig',
-    'core'
+    'core',
+    'reports'
 ]
 
 REST_FRAMEWORK = {
