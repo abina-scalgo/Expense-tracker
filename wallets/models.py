@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 import uuid
+from decimal import Decimal
 
 #Create your models here.
 
@@ -11,9 +12,9 @@ class Wallet(models.Model):
         on_delete=models.CASCADE, 
         related_name='wallet'
     )
-    available_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
-    total_redeemed = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
-    pending_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    available_balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    total_redeemed = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    pending_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     updated_at = models.DateTimeField(auto_now=True)
     
     expense = models.ForeignKey(

@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'wallets',
     'notifications.apps.NotificationsConfig',
     'core',
+    'django_celery_beat',
     'reports'
 ]
 
@@ -184,4 +185,17 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.getenv("EMAIL_DEFAULT_FROM", EMAIL_HOST_USER)
 
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
+CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Kolkata'
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
+CELERY_BEAT_SCHEDULE = {
+    "process-auto-approvals": {
+        "task": "expense.tasks.process_auto_approvals",
+        "schedule": 900.0,  # every 15 minutes
+    },
+}

@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import ExpenseCategory, Expense, ExpenseReceipt
 import os
+from django.db import transaction
+from wallets.models import Wallet
 
 class ExpenseCategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -41,21 +43,57 @@ class ExpenseSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['status', 'id', 'created_at']
 
-    def create(self, validated_data):
-        uploaded_files = validated_data.pop('uploaded_files', [])
-        expense = Expense.objects.create(**validated_data)
-        
-        for file_obj in uploaded_files:
-            # Extract metadata for the ExpenseReceipt model
-            original_name = file_obj.name
-            extension = os.path.splitext(original_name)[1].lower().replace('.', '')
-            size_kb = int(file_obj.size / 1024)
+    # File Validation
+    def validate_uploaded_files(self, files):
 
-            ExpenseReceipt.objects.create(
-                expense=expense,
-                file=file_obj,
-                file_name=original_name,
-                file_type=extension,
-                file_size_kb=size_kb
+        allowed_extensions = ['jpg', 'jpeg', 'png', 'pdf']
+        max_size_mb = 5
+
+        for file_obj in files:
+            extension = (
+                os.path.splitext(file_obj.name)[1].lower().replace('.', '')
             )
+
+            if extension not in allowed_extensions:
+                raise serializers.ValidationError(f'{extension} files are not allowed. ')
+
+            if file_obj.size > max_size_mb *1024 *1024:
+                raise serializers.ValidationError(f'File size exceeds 5MB.')
+            
+        return files
+
+    # Create Expense
+    def create(self, validated_data):
+
+        uploaded_files = validated_data.pop('uploaded_files', [])
+
+        with transaction.atomic():
+            expense = Expense.objects.create(**validated_data)
+
+            #Update Wallet
+            wallet, created = (
+                Wallet.objects.select_for_update().get_or_create(
+                    user=expense.user
+                )
+            )
+            wallet.pending_amount += expense.amount
+            wallet.save()
+
+            for file_obj in uploaded_files:
+                original_name = file_obj.name
+
+                extension = (
+                    os.path.splitext(original_name)[1].lower().replace('.', '')
+                )
+
+                size_kb = int(file_obj.size / 1024)
+
+                ExpenseReceipt.objects.create(
+                    expense=expense,
+                    file=file_obj,
+                    file_name=original_name,
+                    file_type=extension,
+                    file_size_kb=size_kb
+                )
+
         return expense
