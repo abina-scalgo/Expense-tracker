@@ -1,12 +1,8 @@
 from rest_framework import serializers
 from .models import ExpenseCategory, Expense, ExpenseReceipt
 import os
-from decimal import Decimal
 from django.db import transaction
-from django.utils import timezone
-from core.models import SystemSettings
-from wallets.models import Wallet, Transaction
-from notifications.models import Notification
+from wallets.models import Wallet
 
 class ExpenseCategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -69,80 +65,35 @@ class ExpenseSerializer(serializers.ModelSerializer):
     # Create Expense
     def create(self, validated_data):
 
-        uploaded_files = validated_data.pop(
-            'uploaded_files',
-            []
-        )
+        uploaded_files = validated_data.pop('uploaded_files', [])
 
         with transaction.atomic():
-            expense = Expense.objects.create(
-                **validated_data
-            )
+            expense = Expense.objects.create(**validated_data)
 
-            # Save Receipts
+            #Update Wallet
+            wallet, created = (
+                Wallet.objects.select_for_update().get_or_create(
+                    user=expense.user
+                )
+            )
+            wallet.pending_amount += expense.amount
+            wallet.save()
+
             for file_obj in uploaded_files:
                 original_name = file_obj.name
+
                 extension = (
                     os.path.splitext(original_name)[1].lower().replace('.', '')
                 )
+
                 size_kb = int(file_obj.size / 1024)
+
                 ExpenseReceipt.objects.create(
-                    expense = expense,
-                    file = file_obj,
-                    file_name = original_name,
-                    file_type = extension,
-                    file_size_kb = size_kb
-                )
-
-
-            # Get Auto Approve Limit
-            try:
-                settings = SystemSettings.objects.get(
-                    key='AUTO_APPROVE_AMOUNT_LIMIT'
-                )
-                limit = Decimal(settings.value) 
-
-            except SystemSettings.DoesNotExist:
-                limit = Decimal('500')
-
-            # Amount Based Approval
-            if expense.amount < limit:
-                expense.status = Expense.Status.AUTO_APPROVED
-                expense.is_amount_auto_approved = True
-                expense.actioned_at = timezone.now()
-                expense.save()
-
-                # Wallet Update
-                wallet, created = (
-                    Wallet.objects.select_for_update().get_or_create(user=expense.user)
-                )
-                if wallet.pending_amount >= expense.amount:
-                    wallet.pending_amount -= expense.amount
-                wallet.available_balance += expense.amount
-                wallet.save()
-
-                # Wallet Transaction
-                Transaction.objects.create(
-                    wallet=wallet,
                     expense=expense,
-                    type='credit',
-                    amount=expense.amount,
-                    description = (
-                        'Expense auto-approved '
-                        'by amount threshold '
-                    )
+                    file=file_obj,
+                    file_name=original_name,
+                    file_type=extension,
+                    file_size_kb=size_kb
                 )
 
-                # Notification
-                Notification.objects.create(
-                    user=expense.user,
-                    title='Expense Auto Approved',
-                    message=(
-                        f'Your expense of '
-                        f'₹{expense.amount} '
-                        f'was auto-approved'
-                    ),
-                    type='expense_auto_approved'
-                )
-
-            return expense
+        return expense
