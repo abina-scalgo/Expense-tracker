@@ -81,6 +81,15 @@ class Expense(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    actioned_by = models.ForeignKey(
+    settings.AUTH_USER_MODEL,
+    on_delete=models.SET_NULL,
+    blank=True,
+    null=True,
+    related_name='actioned_expenses',
+    help_text="Admin who approved/rejected the expense. NULL for auto approvals."
+    )
+
     class Meta:
         db_table = 'expenses'
         ordering = ['-created_at']
