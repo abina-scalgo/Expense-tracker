@@ -47,7 +47,8 @@ INSTALLED_APPS = [
     'wallets',
     'notifications.apps.NotificationsConfig',
     'core',
-    'django_celery_beat'
+    'django_celery_beat',
+    'reports'
 ]
 
 REST_FRAMEWORK = {
