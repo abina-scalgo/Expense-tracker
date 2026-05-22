@@ -12,6 +12,8 @@ from django.utils import timezone
 from rest_framework.decorators import action
 from django.db import transaction
 from wallets.models import Wallet, Transaction
+from decimal import Decimal
+from notifications.models import Notification
 
 # Create your views here.
 
@@ -145,3 +147,45 @@ class AdminExpenseViewSet(viewsets.ReadOnlyModelViewSet):
             wallet.save()
 
         return Response({"detail": "Expense rejected successfully."})
+    
+    # Force Auto Approve
+    @action(detail=True, methods=['post'], url_path='force-auto-approve')
+    def force_auto_approve(self, request, pk=None):
+
+        expense = self.get_object()
+        if expense.status != Expense.Status.PENDING:
+            return Response({"detail": "Only pending expenses can be auto approved"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        with transaction.atomic():
+
+            expense.status = Expense.Status.AUTO_APPROVED
+            expense.actioned_by = request.user
+            expense.actioned_at = timezone.now()
+            expense.save()
+
+            wallet, created = Wallet.objects.select_for_update().get_or_create(user=expense.user)
+            if wallet.pending_amount >= expense.amount:
+                wallet.pending_amount -= expense.amount
+            wallet.available_balance += expense.amount
+            wallet.save()
+
+            Transaction.objects.create(
+                wallet=wallet,
+                expense=expense,
+                type='credit',
+                amount=expense.amount,
+                description=(
+                    'Expense force auto approved by admin'
+                )
+            )
+
+            Notification.objects.create(
+                user=expense.user,
+                title='Expense Auto Approved',
+                message=(
+                    f'Your expense of ₹{expense.amount} '
+                    f'was force auto approved by admin. '
+                ),
+                type='expense_auto_approved'
+            )
+        return Response({"detail": ("Expense force auto approved successfully.")})
